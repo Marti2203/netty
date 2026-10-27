@@ -54,9 +54,14 @@ final class GeneralNameUtils {
     }
 
     static GeneralName dnsName(String dnsName) {
-        URI uri = URI.create("ip://" + dnsName);
+        // Allow a single leading wildcard label (RFC 6125 Section 6.4.3), and validate the rest as a host name.
+        String wildcard = dnsName.startsWith("*.") ? "*." : "";
+        URI uri = URI.create("ip://" + dnsName.substring(wildcard.length()));
         String host = uri.getHost();
-        return new GeneralName(GeneralName.dNSName, host);
+        if (host == null) {
+            throw new IllegalArgumentException("Not a valid DNS name: " + dnsName);
+        }
+        return new GeneralName(GeneralName.dNSName, wildcard + host);
     }
 
     static GeneralName directoryName(String x500Name) {

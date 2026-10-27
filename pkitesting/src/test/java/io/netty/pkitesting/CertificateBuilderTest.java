@@ -326,6 +326,27 @@ class CertificateBuilderTest {
     }
 
     @Test
+    void createCertificateWithWildcardDnsSan() throws Exception {
+        X509Bundle root = BASE.copy()
+                .setIsCertificateAuthority(true)
+                .setKeyUsage(true, KeyUsage.digitalSignature, KeyUsage.keyCertSign)
+                .buildSelfSigned();
+        X509Bundle leaf = BASE.copy()
+                .subject("CN=leaf.netty.io")
+                .addSanDnsName("*.leaf.netty.io")
+                .buildIssuedBy(root);
+        List<List<?>> sans = new ArrayList<>(leaf.getCertificate().getSubjectAlternativeNames());
+        assertThat(sans).containsExactly(Arrays.asList(2, "*.leaf.netty.io"));
+    }
+
+    @Test
+    void invalidDnsSanIsRejected() {
+        assertThrows(IllegalArgumentException.class, () -> BASE.copy().addSanDnsName("_dmarc.netty.io"));
+        assertThrows(IllegalArgumentException.class, () -> BASE.copy().addSanDnsName("www..netty.io"));
+        assertThrows(IllegalArgumentException.class, () -> BASE.copy().addSanDnsName("*.*.netty.io"));
+    }
+
+    @Test
     void createCertificteWithExtendedKeyUsage() throws Exception {
         CertificateBuilder builder = BASE.copy()
                 .setIsCertificateAuthority(true)
